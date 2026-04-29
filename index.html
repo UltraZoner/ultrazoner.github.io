@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Royal Nickname Card Generator</title>
+    <style>
+        /* --- Pastel & Royal GUI Styling --- */
+        body {
+            background: linear-gradient(135deg, #f8edeb, #e8dff5);
+            font-family: 'Georgia', serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #4a4a4a;
+        }
+
+        .gui-container {
+            background: #ffffff;
+            padding: 40px;
+            border-radius: 20px;
+            border: 3px solid #d4af37;
+            box-shadow: 0 15px 35px rgba(212, 175, 55, 0.15);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 {
+            color: #d4af37;
+            margin-bottom: 30px;
+            font-weight: normal;
+            letter-spacing: 1px;
+        }
+
+        .button-module {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(145deg, #e6d7ff, #d4af37);
+            background-blend-mode: multiply;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Georgia', serif;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(212, 175, 55, 0.3);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* --- Wheel / Slot Machine Styling --- */
+        .wheel-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .wheel-box {
+            background: #fdfbf7;
+            border: 2px dashed #d4af37;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 24px;
+            color: #d4af37;
+            font-weight: bold;
+            min-height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.3s;
+            user-select: none;
+        }
+
+        .wheel-box:hover {
+            background: #f9f2e3;
+        }
+
+        .wheel-label {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: -15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* --- UI Step Management --- */
+        #step-2-wheels, #step-3-preview {
+            display: none; /* Hidden initially */
+        }
+
+        #downloadBtn, #restartBtn {
+            background: #b2d8d8;
+            color: #333;
+            margin-top: 20px;
+        }
+
+        canvas {
+            margin-top: 20px;
+            max-width: 100%;
+            height: auto;
+            border-radius: 12px;
+            border: 1px solid #f0e6ea;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="gui-container">
+        <h1>✨ The Royal Rite of Initiation ✨</h1>
+        
+        <div id="step-1-selection">
+            <p>Select your royal lineage to begin:</p>
+            <div class="button-module">
+                <button onclick="startWheels('male')">The Patriarch's Ascendancy</button>
+                <button onclick="startWheels('female')">The Matriarch's Ascent</button>
+            </div>
+        </div>
+
+        <div id="step-2-wheels">
+            <p>Click the boxes to spin your royal identity!</p>
+            
+            <div class="wheel-container">
+                <div class="wheel-label">Royal Title</div>
+                <div class="wheel-box" id="titleWheel" onclick="spinWheel('title')">Click to Spin</div>
+
+                <div class="wheel-label">Royal Nickname</div>
+                <div class="wheel-box" id="nicknameWheel" onclick="spinWheel('nickname')">Click to Spin</div>
+            </div>
+
+            <button id="continueBtn" onclick="generateCardPreview()" disabled>Continue to Card</button>
+        </div>
+
+        <div id="step-3-preview">
+            <canvas id="cardCanvas"></canvas>
+            
+            <div class="button-module">
+                <button id="downloadBtn" onclick="downloadCard()">Download Your Card</button>
+                <button id="restartBtn" onclick="location.reload()">Start Over</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        
+        // 1. Position of the TITLE text on the image
+        const TITLE_X_OFFSET = 0;   // 0 = centered. Negative moves left, Positive moves right.
+        const TITLE_Y_POSITION = 350; // Distance from the TOP of the image (Adjust this to hit the top blank line)
+        const TITLE_FONT = "italic 40px 'Pinyon Script', cursive";
+        const TITLE_COLOR = "#a08b5c";
+
+        // 2. Position of the NICKNAME text on the image
+        const NICKNAME_X_OFFSET = 0; // 0 = centered.
+        const NICKNAME_Y_POSITION = 450; // Distance from the TOP of the image (Adjust this to hit the bottom blank line)
+        const NICKNAME_FONT = "bold 60px 'Pinyon Script', cursive";
+        const NICKNAME_COLOR = "#d4af37";
+
+        // ==========================================
+
+        // --- Data Modules ---
+        const maleTitles = [
+            "Emperor", "King", "Grand Duke", "Grand Prince", "Archduke", "Duke", "Prince", "Marquess", "Count", "Viscount", "Baron", "Sultan", "Shah", "Tsar", "Kaiser", "Pharaoh", "Lord", "Sir", "Knight"
+        ];
+        
+        const femaleTitles = [
+            "Empress", "Queen", "Grand Duchess", "Grand Princess", "Archduchess", "Duchess", "Princess", "Marchioness", "Countess", "Viscountess", "Baroness", "Sultana", "Shahina", "Tsarina", "Kaiserin", "Pharaoh", "Dame", "Lady"
+        ];
+        
+        const sharedNicknames = [
+            "Chaos", "Sleep Deprivation", "Cheeseburgers", "Pickles", "Microwaves", "Emotional Damage", "Frogs", "Side Quests", "WiFi Lags", "Crispy Onions", "Gremlins", "Rat Energy", "Oopsie Daisies", "Spaghetti", "Toothpaste", "Keyboard Smashers", "Panickers", "Existential Crisis", "Bread", "Screaming", "Milk", "Toe Beans", "Were-Goblins", "Buffering", "Lagging Brains", "Midnight Snacks", "Confusion", "Bonks", "Soggy Fries", "No Thoughts", "Static Noise", "Oatmeal", "Broken Chargers", "Ducks", "Sleep Paralysis", "Alarm Snoozes", "Half Batteries", "Glitches", "Noodles", "Banana Peels", "Spicy Air", "Empty Brains", "A Panic Button", "Unstable WiFi", "Crunchy Leaves", "Potatoes", "Error 404", "Chicken Nuggets", "Soup", "Silence", "Overthinking", "Croissants", "Spooky Dolls", "Side Eyes", "Being Dead Inside", "Lava Lamps", "Anxiety", "Ice Cream", "Keyboard Warriors", "Sleep", "Shrimps", "No Signal", "TikTok", "Lost Socks", "Weekend Procrastination", "Brain Lag", "Cursed Energy", "Being Never Unplugged", "Sticky Keys", "Were-Humans", "Trash Pandas", "Hot Mess", "Wrong Turns", "Tardiness", "Snack Thieves", "Dramatic Exits", "Ice Cubes", "Mild Chaos", "Existential Bread", "Spilled Tea", "Fake Laughs", "Internal Panicking", "Sneeze Attacks", "Overcooked", "Sleepy Potatoes", "Broken Records", "Low Social Batteries", "Instant Regrets", "Floors", "Cereal Killers", "Random Thoughts", "Sauce Packets", "Speakers", "Awkward Silence", "Daydreaming", "Mood Swings", "Ghost Typing", "Lag Spikes", "Snack Breaks", "Chaotic Neutral", "Deadlines", "Academic Weapon (Broken)", "GPA Prayer Circles", "Library Furniture", "Caffeine Addiction", "Last Minute Legends", "Procrastination Kings", "Permanent Dark Circles", "Instant Noodle Sommelier", "Lecturer’s Nightmares", "Attendance Markers", "Back-Row Bandits", "Group Project Carriers", "Ghost Participants", "Slide Eaters", "PowerPoint Poisoning", "Submission Sweaters", "Hell Referencers", "Turnitin Victims", "Academic Burnout", "Human Highlighters", "Hallway Zombies", "Canva Notifications", "Grauation loading...", "Final Boss (The Exam)", "Syntax Errors", "Missing Semicolon", "Stack Overflow Residents", "GitHub Janitors", "Legacy Codes", "Infinite Loops", "Kernel Panics", "RAM Eaters", "Binary Sunsets", "Spaghetti Codes", "Cyber Security Threats", "Packet Losses", "Logic Bombs", "Firewall Breachers", "Dark Mode Devs", "Bug Architects", "Hardware Gores", "Solder Burns", "Blue Screen of Death", "Router Resetters", "Localhost Legends", "Root Privileges", "Git Push & Prayers", "Docker Disasters", "Ping 999", "Final_v2_Final_REAL.psd", "Rendering... (ETA 5 Years)", "Layer 0", "Comic Sans Enjoyers", "Vector Victims", "RGB Nightmares", "Frame Drops", "Bezier Curve Struggle", "Low Res Humans", "Glitch Art (Accidental)", "Aspect Ratio Abusers", "Stock Photo Models", "Green Screen Ghosts", "Keyframe Killers", "Missing Assets", "Timeline Terrors", "Exporting Failures", "Color Blind Designers", "Unlabeled Layers", "Crashes in Premiere", "Room Temperature IQ", "Sentient Toasters", "WiFi Breathes", "Capybara Energy", "Window Lickers", "Manual Breathers", "Vibe Check Failed", "Emotional Support Snacks", "Floor Residents", "Human Errors", "Unpaid Interns", "Nap Enthusiasts", "Social Battery 1%", "Walking Red Flags", "No Thinking", "Professional Over-Sharers", "Last Remaining Brain Cells", "Clown University Deans", "Main Character Syndrome", "Background NPCs", "Thumb Drives", "Keyboard Crumb Collectors", "Squidwards", "Rage Quiters", "Desktop Messes", "100 Tabs Open", "Incognito Mode", "Simulation Glitches", "Final Straws", "The Administrators"
+        ];
+
+        // --- State Variables ---
+        let currentGender = '';
+        let activeNicknames = [];
+        let finalTitle = '';
+        let finalNickname = '';
+        let isTitleSpun = false;
+        let isNicknameSpun = false;
+
+        // Load the blank template image
+        const templateImg = new Image();
+        templateImg.src = 'template.png'; // Make sure this file is in the same folder
+
+        // --- Step 1 to Step 2 Transition ---
+        function startWheels(gender) {
+            currentGender = gender;
+            activeTitles = gender === 'male' ? maleTitles : femaleTitles;
+            
+            document.getElementById('step-1-selection').style.display = 'none';
+            document.getElementById('step-2-wheels').style.display = 'block';
+        }
+
+        // --- Wheel Spin Logic ---
+        function spinWheel(type) {
+            const box = document.getElementById(type + 'Wheel');
+            const dataArray = type === 'title' ? activeTitles : sharedNicknames;
+            
+            let spins = 0;
+            const maxSpins = 15; // How many times the text flashes before stopping
+            
+            // Prevent spam clicking while spinning
+            box.style.pointerEvents = 'none';
+
+            const interval = setInterval(() => {
+                // Flash random words
+                const randomWord = dataArray[Math.floor(Math.random() * dataArray.length)];
+                box.innerText = randomWord;
+                spins++;
+
+                if (spins >= maxSpins) {
+                    clearInterval(interval);
+                    box.style.pointerEvents = 'auto'; // Re-enable clicking
+                    box.style.background = '#e6d7ff'; // Highlight to show it's done
+                    box.style.color = '#333';
+                    
+                    // Save the final result
+                    if (type === 'title') {
+                        finalTitle = randomWord;
+                        isTitleSpun = true;
+                    } else {
+                        finalNickname = randomWord;
+                        isNicknameSpun = true;
+                    }
+
+                    // Check if both are done to enable the Continue button
+                    if (isTitleSpun && isNicknameSpun) {
+                        document.getElementById('continueBtn').disabled = false;
+                    }
+                }
+            }, 80); // Speed of the spin (80ms)
+        }
+
+        // --- Step 2 to Step 3 Transition & Canvas Drawing ---
+        function generateCardPreview() {
+            document.getElementById('step-2-wheels').style.display = 'none';
+            document.getElementById('step-3-preview').style.display = 'block';
+
+            const canvas = document.getElementById('cardCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas dimensions to match image
+            canvas.width = templateImg.width || 800; // Fallback to 800 if not loaded
+            canvas.height = templateImg.height || 600;
+
+            // Draw template
+            ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
+
+            // Center alignment math
+            const centerX = canvas.width / 2;
+
+            // --- DRAW TITLE ---
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            
+            ctx.font = TITLE_FONT;
+            ctx.fillStyle = TITLE_COLOR;
+            ctx.fillText(finalTitle, centerX + TITLE_X_OFFSET, TITLE_Y_POSITION);
+
+            // --- DRAW NICKNAME ---
+            ctx.font = NICKNAME_FONT;
+            ctx.fillStyle = NICKNAME_COLOR;
+            ctx.fillText(finalNickname, centerX + NICKNAME_X_OFFSET, NICKNAME_Y_POSITION);
+        }
+
+        // --- Download Function ---
+        function downloadCard() {
+            const canvas = document.getElementById('cardCanvas');
+            const link = document.createElement('a');
+            link.download = `Royal_Card_${finalNickname.replace(/\s+/g, '_')}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>
